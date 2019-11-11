@@ -81,11 +81,4 @@ else: #if downloading all songs
         outfile.write(urlopen(req).read())
         outfile.close()
 
-print("\nAll songs downloaded!")
-
-
-
-
-
-
-        
+print("\nAll songs downloaded!")       
