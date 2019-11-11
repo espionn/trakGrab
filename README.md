@@ -16,7 +16,7 @@ The script prompts the user for an artist (their traktrain URL)
 and for a beat to download. The wildcard character (*) can be 
 used to download all of an artists available beats. 
 
-Beats are downloaded to $PWD\songs\artistName\songName.mp3 where $PWD
+Beats are downloaded to `$PWD\songs\artistName\songName.mp3` where $PWD
 is the location of the script.
 
 
