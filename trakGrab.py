@@ -1,7 +1,7 @@
 # trakGrab.py
 # Daniel Guilbert
-# 12.11.19
-# v1.0
+# 12.11.19 - 07.08.24
+# v1.1
 
 from urllib.request import urlopen, URLError, Request
 from bs4 import BeautifulSoup
@@ -10,13 +10,16 @@ import os
 
 #Get information
 artist = input("What is the artist name? traktrain.com/")
-song = input("Which song would you like to download? (* for all) ")
+song = '*' #input("Which song would you like to download? (* for all) ")
 
 print("Connecting...")
 #get aws server url
 urlmatch = re.compile('(.)*var AWS_BASE_URL(.)*')
+#print("base url: " + urlmatch)
 try:
-    html = urlopen("http://www.traktrain.com/"+artist).read().decode('utf-8')
+    req = Request("http://www.traktrain.com/"+artist)
+    req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36')
+    html = urlopen(req).read().decode('utf-8')
 except URLError:
     input("That artist cannot be found, please try again.")
     exit()
@@ -55,7 +58,9 @@ if song != '*':
 
 else: #if downloading all songs
     soup = BeautifulSoup(html, 'html.parser')
-    s = soup.findAll("div", {"class": 'player-track play js-player-legacy-select-track'})
+    #s = soup.findAll("div", {"class": 'player-track play js-player-legacy-select-track'})
+    s = soup.findAll("div", {"class": 'beat-list js-player-mark-active'})
+    print(s)
     for src in s:
         src = str(src)
 
