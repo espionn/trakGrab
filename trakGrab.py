@@ -60,7 +60,7 @@ else: #if downloading all songs
     soup = BeautifulSoup(html, 'html.parser')
     #s = soup.findAll("div", {"class": 'player-track play js-player-legacy-select-track'})
     s = soup.findAll("div", {"class": 'beat-list js-player-mark-active'})
-    print(s)
+    
     for src in s:
         src = str(src)
 
@@ -82,6 +82,7 @@ else: #if downloading all songs
         req.add_header('Referer', 'https://traktrain.com/') #traktrain blocks access unless this is set
 
         songname = re.sub(r'[^\w|\s]', '', songname)
+        songname = re.sub('[|]', '', songname)
         outfile = open(pwd+songname+".mp3", 'wb')
         outfile.write(urlopen(req).read())
         outfile.close()
