@@ -11,7 +11,6 @@ import os
 
 #Get information
 artist = input("What is the artist name? traktrain.com/")
-song = '*' #input("Which song would you like to download? (* for all) ")
 
 print("Connecting...")
 #get aws server url
@@ -34,83 +33,89 @@ pwd = os.path.join(os.getcwd(), "songs", artist)
 if not os.path.exists(pwd):
     os.makedirs(pwd)
 
-#if downloading single song
-if song != '*':    
-    #find song metadata and create full URL to mp3
+soup = BeautifulSoup(html, 'html.parser')
+nameKeys = ['title', 'beatName', 'beat_name', 'trackName', 'track_name', 'name']
+genericNames = {'mp3 track', 'wav track', 'mp3', 'wav', 'track', 'untitled'}
+
+beats = []
+seen = set()
+for el in soup.select('[data-player-info]'):
     try:
-        songmatch = re.compile("(.)*data-player-info='{\"name\":\""+song+"(.)*", re.I)
-        s = songmatch.search(html).group()
-        s = s.split("\"src\"")[1].split("\"")[1]
-        songUrl = baseUrl + s
-    except AttributeError:
+        info = json.loads(el['data-player-info'])
+    except ValueError:
+        continue
+
+    srcstr = info.get('src')
+    if not srcstr or srcstr in seen:
+        continue
+    seen.add(srcstr)
+
+    songname = None
+    for key in nameKeys:
+        val = info.get(key)
+        if isinstance(val, str) and val.strip() and val.strip().lower() not in genericNames:
+            songname = val.strip()
+            break
+    if not songname:
+        titleEl = el.find(class_=re.compile('(title|name)', re.I))
+        if titleEl and titleEl.get_text(strip=True):
+            songname = titleEl.get_text(strip=True)
+    if not songname:
+        songname = "beat_" + str(len(beats) + 1)
+
+    beats.append((songname, srcstr))
+
+if not beats:
+    print("No songs found, please try again.")
+    exit()
+
+query = input("Filter by name (leave blank for all): ").strip().lower()
+if query:
+    beats = [b for b in beats if query in b[0].lower()]
+    if not beats:
         print("That song could not be found, please try again.")
         exit()
 
-    print("Downloading '" + song + "'")
+for i, (songname, _) in enumerate(beats, 1):
+    print(str(i).rjust(3) + ". " + songname)
+
+choice = input("\nWhich songs would you like to download? (* for all, e.g. 1,3,5-7) ").strip()
+if choice in ('*', ''):
+    indices = list(range(len(beats)))
+else:
+    picked = set()
+    try:
+        for part in choice.split(','):
+            part = part.strip()
+            if '-' in part:
+                a, b = part.split('-', 1)
+                picked.update(range(int(a) - 1, int(b)))
+            elif part:
+                picked.add(int(part) - 1)
+    except ValueError:
+        print("Invalid selection, please try again.")
+        exit()
+    indices = sorted(i for i in picked if 0 <= i < len(beats))
+
+for i in indices:
+    songname, srcstr = beats[i]
+    songUrl = baseUrl + srcstr
+
+    print("Downloading '" + songname + "'")
+
     #download file to $PWD\songs\{artist}\{song}.mp3
     req = Request(songUrl)
     req.add_header('Referer', 'https://traktrain.com/') #traktrain blocks access unless this is set
 
-    song = re.sub(r'[^\w ]', '', song)
-    outfile = open(os.path.join(pwd, song + ".mp3"), 'wb')
+    songname = re.sub(r'[^\w\s\-()]', '', songname).strip() or "untitled"
+    outpath = os.path.join(pwd, songname + ".mp3")
+    n = 1
+    while os.path.exists(outpath):
+        outpath = os.path.join(pwd, songname + " (" + str(n) + ").mp3")
+        n += 1
+
+    outfile = open(outpath, 'wb')
     outfile.write(urlopen(req).read())
     outfile.close()
-
-else: #if downloading all songs
-    soup = BeautifulSoup(html, 'html.parser')
-    nameKeys = ['title', 'beatName', 'beat_name', 'trackName', 'track_name', 'name']
-    genericNames = {'mp3 track', 'wav track', 'mp3', 'wav', 'track', 'untitled'}
-
-    beats = []
-    seen = set()
-    for el in soup.select('[data-player-info]'):
-        try:
-            info = json.loads(el['data-player-info'])
-        except ValueError:
-            continue
-
-        srcstr = info.get('src')
-        if not srcstr or srcstr in seen:
-            continue
-        seen.add(srcstr)
-
-        songname = None
-        for key in nameKeys:
-            val = info.get(key)
-            if isinstance(val, str) and val.strip() and val.strip().lower() not in genericNames:
-                songname = val.strip()
-                break
-        if not songname:
-            titleEl = el.find(class_=re.compile('(title|name)', re.I))
-            if titleEl and titleEl.get_text(strip=True):
-                songname = titleEl.get_text(strip=True)
-        if not songname:
-            songname = "beat_" + str(len(beats) + 1)
-
-        beats.append((songname, srcstr))
-
-    if not beats:
-        print("No songs found, please try again.")
-        exit()
-
-    for songname, srcstr in beats:
-        songUrl = baseUrl + srcstr
-
-        print("Downloading '" + songname + "'")
-        
-        #download file to $PWD\songs\{artist}\{song}.mp3
-        req = Request(songUrl)
-        req.add_header('Referer', 'https://traktrain.com/') #traktrain blocks access unless this is set
-
-        songname = re.sub(r'[^\w\s\-()]', '', songname).strip() or "untitled"
-        outpath = os.path.join(pwd, songname + ".mp3")
-        n = 1
-        while os.path.exists(outpath):
-            outpath = os.path.join(pwd, songname + " (" + str(n) + ").mp3")
-            n += 1
-
-        outfile = open(outpath, 'wb')
-        outfile.write(urlopen(req).read())
-        outfile.close()
 
 print("\nAll songs downloaded!")
