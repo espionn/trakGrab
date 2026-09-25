@@ -1,6 +1,7 @@
 # trakGrab.py
 # Daniel Guilbert
 # 12.11.19 - 07.08.24
+# Modified by ktaffy 09.25.26
 # v1.1
 
 from urllib.request import urlopen, URLError, Request
