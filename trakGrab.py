@@ -28,8 +28,7 @@ print("Connected!\n")
 m = urlmatch.search(html)
 baseUrl = m.group().split("'")[1]
 
-pwd = os.getcwd()
-pwd = pwd + "\\songs\\" + artist + "\\"
+pwd = os.path.join(os.getcwd(), "songs", artist)
 
 if not os.path.exists(pwd):
     os.makedirs(pwd)
@@ -52,7 +51,7 @@ if song != '*':
     req.add_header('Referer', 'https://traktrain.com/') #traktrain blocks access unless this is set
 
     song = re.sub(r'[^\w ]', '', song)
-    outfile = open(pwd+song+".mp3", 'wb')
+    outfile = open(os.path.join(pwd, song + ".mp3"), 'wb')
     outfile.write(urlopen(req).read())
     outfile.close()
 
@@ -83,8 +82,8 @@ else: #if downloading all songs
 
         songname = re.sub(r'[^\w|\s]', '', songname)
         songname = re.sub('[|]', '', songname)
-        outfile = open(pwd+songname+".mp3", 'wb')
+        outfile = open(os.path.join(pwd, songname + ".mp3"), 'wb')
         outfile.write(urlopen(req).read())
         outfile.close()
 
-print("\nAll songs downloaded!")       
+print("\nAll songs downloaded!")
