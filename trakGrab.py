@@ -102,9 +102,14 @@ else: #if downloading all songs
         req = Request(songUrl)
         req.add_header('Referer', 'https://traktrain.com/') #traktrain blocks access unless this is set
 
-        songname = re.sub(r'[^\w|\s]', '', songname)
-        songname = re.sub('[|]', '', songname)
-        outfile = open(os.path.join(pwd, songname + ".mp3"), 'wb')
+        songname = re.sub(r'[^\w\s\-()]', '', songname).strip() or "untitled"
+        outpath = os.path.join(pwd, songname + ".mp3")
+        n = 1
+        while os.path.exists(outpath):
+            outpath = os.path.join(pwd, songname + " (" + str(n) + ").mp3")
+            n += 1
+
+        outfile = open(outpath, 'wb')
         outfile.write(urlopen(req).read())
         outfile.close()
 
