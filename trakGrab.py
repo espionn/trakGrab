@@ -5,6 +5,7 @@
 
 from urllib.request import urlopen, URLError, Request
 from bs4 import BeautifulSoup
+import json
 import re
 import os
 
@@ -57,22 +58,43 @@ if song != '*':
 
 else: #if downloading all songs
     soup = BeautifulSoup(html, 'html.parser')
-    #s = soup.findAll("div", {"class": 'player-track play js-player-legacy-select-track'})
-    s = soup.findAll("div", {"class": 'beat-list js-player-mark-active'})
-    
-    for src in s:
-        src = str(src)
+    nameKeys = ['title', 'beatName', 'beat_name', 'trackName', 'track_name', 'name']
+    genericNames = {'mp3 track', 'wav track', 'mp3', 'wav', 'track', 'untitled'}
 
-        #exception handling because sometimes the html misformats (?)
+    beats = []
+    seen = set()
+    for el in soup.select('[data-player-info]'):
         try:
-            srcstr = src.split("\"src\"")[1].split("\"")[1]
-        except IndexError:
-            srcstr = src.split("&quot;src&quot;")[1].split("&quot;")[1]
+            info = json.loads(el['data-player-info'])
+        except ValueError:
+            continue
+
+        srcstr = info.get('src')
+        if not srcstr or srcstr in seen:
+            continue
+        seen.add(srcstr)
+
+        songname = None
+        for key in nameKeys:
+            val = info.get(key)
+            if isinstance(val, str) and val.strip() and val.strip().lower() not in genericNames:
+                songname = val.strip()
+                break
+        if not songname:
+            titleEl = el.find(class_=re.compile('(title|name)', re.I))
+            if titleEl and titleEl.get_text(strip=True):
+                songname = titleEl.get_text(strip=True)
+        if not songname:
+            songname = "beat_" + str(len(beats) + 1)
+
+        beats.append((songname, srcstr))
+
+    if not beats:
+        print("No songs found, please try again.")
+        exit()
+
+    for songname, srcstr in beats:
         songUrl = baseUrl + srcstr
-        try:
-            songname = src.split("\"name\"")[1].split("\"")[1]
-        except IndexError:
-            songname = src.split("&quot;name&quot;")[1].split("&quot;")[1]
 
         print("Downloading '" + songname + "'")
         
